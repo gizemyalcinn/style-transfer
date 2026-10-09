@@ -1,5 +1,6 @@
 import torch
 from torchvision.models import vgg19, VGG19_Weights
+from torch.nn.functional import mse_loss
 
 MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
@@ -28,3 +29,14 @@ def gram_matrix(x):
     B, C, H, W = x.shape
     F = x.view(B, C, H * W)
     return (F @ F.transpose(1, 2)) / (C * H * W)
+
+def content_loss(gen_features, content_features):
+    return mse_loss(gen_features[CONTENT_LAYER], content_features[CONTENT_LAYER])
+
+def style_loss(gen_features, style_grams):
+    loss = 0.0
+    for name in STYLE_LAYERS:
+        G = gram_matrix(gen_features[name])
+        target = style_grams[name].expand_as(G)
+        loss = loss + mse_loss(G, target)
+    return loss
